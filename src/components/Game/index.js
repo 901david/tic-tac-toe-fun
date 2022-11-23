@@ -178,39 +178,42 @@ export const Game = () => {
     setWinnerState();
   }, [setWinnerState]);
 
-  const minMax = useCallback(
-    (localBoardState, isMaximizing, depth = 0, calls = 0) => {
-      return 1;
-      // calls++;
-      // console.log('calls', calls);
-      // const { hasWinnerExists, winner, hasTie } =
-      //   checkForWinner(localBoardState);
-      // if (hasWinnerExists) {
-      //   return minMaxMap[winner];
-      // }
-
-      // if (hasTie) {
-      //   return 0;
-      // }
-
-      // for (let i = 0; i < board.length; i++) {
-      //   for (let j = 0; j < board[i].cells.length; j++) {
-      //     if (localBoardState[board[i].cells[j].id] === '' && isMaximizing) {
-      //       localBoardState[board[i].cells[j].id] = gameSymbols.ai;
-      //       minMax(localBoardState, false, depth + 1);
-      //       localBoardState[board[i].cells[j].id] = '';
-      //     }
-
-      //     if (localBoardState[board[i].cells[j].id] === '' && !isMaximizing) {
-      //       localBoardState[board[i].cells[j].id] = gameSymbols.human;
-      //       minMax(localBoardState, true, depth + 1);
-      //       localBoardState[board[i].cells[j].id] = '';
-      //     }
-      //   }
-      // }
-    },
-    []
-  );
+  const minMax = useCallback((localBoardState, isMaximizing, depth = 0) => {
+    const { hasWinnerExists, winner, hasTie } = checkForWinner(localBoardState);
+    if (hasWinnerExists) {
+      return minMaxMap[winner];
+    }
+    if (hasTie) {
+      return minMaxMap.tie;
+    }
+    if (isMaximizing) {
+      let bestScore = -Infinity;
+      for (let i = 0; i < board.length; i++) {
+        for (let j = 0; j < board[i].cells.length; j++) {
+          if (localBoardState[board[i].cells[j].id] === '') {
+            localBoardState[board[i].cells[j].id] = gameSymbols.ai;
+            const score = minMax(localBoardState, false, depth + 1);
+            localBoardState[board[i].cells[j].id] = '';
+            bestScore = Math.max(bestScore, score);
+          }
+        }
+      }
+      return bestScore;
+    } else {
+      let bestScore = Infinity;
+      for (let i = 0; i < board.length; i++) {
+        for (let j = 0; j < board[i].cells.length; j++) {
+          if (localBoardState[board[i].cells[j].id] === '') {
+            localBoardState[board[i].cells[j].id] = gameSymbols.human;
+            const score = minMax(localBoardState, true, depth + 1);
+            localBoardState[board[i].cells[j].id] = '';
+            bestScore = Math.min(bestScore, score);
+          }
+        }
+      }
+      return bestScore;
+    }
+  }, []);
 
   const nextBestMove = currentBoardState => {
     let bestScore = -Infinity;
@@ -219,7 +222,7 @@ export const Game = () => {
       for (let j = 0; j < board[i].cells.length; j++) {
         if (currentBoardState[board[i].cells[j].id] === '') {
           currentBoardState[board[i].cells[j].id] = gameSymbols.ai;
-          let score = minMax(currentBoardState, true);
+          const score = minMax(currentBoardState, false);
           currentBoardState[board[i].cells[j].id] = '';
           if (score > bestScore) {
             bestScore = score;
@@ -256,7 +259,7 @@ export const Game = () => {
 
   useEffect(() => {
     if (userMark === 'ai') {
-      executeAiTurn();
+      setTimeout(() => executeAiTurn(), 750);
     }
   }, [userMark, executeAiTurn]);
 
