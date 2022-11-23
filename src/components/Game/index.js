@@ -23,9 +23,16 @@ const buildInitialBoardState = board => {
   }, {});
 };
 
+const minMaxMap = {
+  ai: 1,
+  tie: 0,
+  human: -1,
+};
+
 export const Game = () => {
   const [winnerExists, setWinnerExists] = useState(false);
   const [winner, setWinner] = useState('');
+  const [hasTie, setHasTie] = useState(false);
   const [board, setBoard] = useState(buildInitialGameState);
   const [boardState, setBoardState] = useState(buildInitialBoardState(board));
   const [userMark, setUserMark] = useState('ai');
@@ -52,108 +59,200 @@ export const Game = () => {
     setUserMark('ai');
   };
 
-  const checkForHorizontal = useCallback(() => {
-    let hasWin = false;
-    let winner = '';
-    board.forEach(boardRow => {
-      const hasAiWinner = boardRow.cells.every(
-        cell => boardState[cell.id] === gameSymbols.ai
-      );
-      const hasHumanWinner = boardRow.cells.every(
-        cell => boardState[cell.id] === gameSymbols.human
-      );
+  const checkForHorizontal = useCallback(
+    currentBoardState => {
+      let hasWin = false;
+      let winner = '';
+      board.forEach(boardRow => {
+        const hasAiWinner = boardRow.cells.every(
+          cell => currentBoardState[cell.id] === gameSymbols.ai
+        );
+        const hasHumanWinner = boardRow.cells.every(
+          cell => currentBoardState[cell.id] === gameSymbols.human
+        );
 
-      if (hasHumanWinner || hasAiWinner) {
-        hasWin = true;
-      }
-      if (hasHumanWinner) {
-        winner = 'human';
-      }
-      if (hasAiWinner) {
-        winner = 'ai';
-      }
-    });
-    return { hasHorizontalWin: hasWin, horizontalWinner: winner };
-  }, [boardState, board]);
-  const checkForVertical = useCallback(() => {
-    let hasWin = false;
-    let winner = '';
-
-    for (let i = 0; i < board.length; i++) {
-      const column = [board[0].cells[i], board[1].cells[i], board[2].cells[i]];
-      const hasAiWinner = column.every(
-        cell => boardState[cell.id] === gameSymbols.ai
-      );
-      const hasHumanWinner = column.every(
-        cell => boardState[cell.id] === gameSymbols.human
-      );
-
-      if (hasHumanWinner || hasAiWinner) {
-        hasWin = true;
-      }
-      if (hasHumanWinner) {
-        winner = 'human';
-      }
-      if (hasAiWinner) {
-        winner = 'ai';
-      }
-    }
-    return { hasVerticalWin: hasWin, verticalWinner: winner };
-  }, [board, boardState]);
-  const checkForDiagonal = useCallback(() => {
-    let hasWin = false;
-    let winner = '';
-
-    const diag1 = [board[0].cells[0], board[1].cells[1], board[2].cells[2]];
-    const diag2 = [board[0].cells[2], board[1].cells[1], board[2].cells[0]];
-    const hasAiWinner =
-      diag1.every(cell => boardState[cell.id] === gameSymbols.ai) ||
-      diag2.every(cell => boardState[cell.id] === gameSymbols.ai);
-    const hasHumanWinner =
-      diag1.every(cell => boardState[cell.id] === gameSymbols.human) ||
-      diag2.every(cell => boardState[cell.id] === gameSymbols.human);
-
-    if (hasHumanWinner || hasAiWinner) {
-      hasWin = true;
-    }
-    if (hasHumanWinner) {
-      winner = 'human';
-    }
-    if (hasAiWinner) {
-      winner = 'ai';
-    }
-    return { hasDiagonalWin: hasWin, diagonalWinner: winner };
-  }, [board, boardState]);
-
-  const checkForWinner = useCallback(() => {
-    const { hasHorizontalWin, horizontalWinner } = checkForHorizontal();
-    const { hasVerticalWin, verticalWinner } = checkForVertical();
-    const { hasDiagonalWin, diagonalWinner } = checkForDiagonal();
-
-    setWinnerExists(hasHorizontalWin || hasVerticalWin || hasDiagonalWin);
-    setWinner(horizontalWinner || verticalWinner || diagonalWinner);
-  }, [checkForHorizontal, checkForVertical, checkForDiagonal]);
-
-  useEffect(() => {
-    checkForWinner();
-  }, [checkForWinner]);
-
-  const executeAiTurn = useCallback(() => {
-    let nextMove = null;
-    board.forEach(boardRow => {
-      boardRow.cells.forEach(cell => {
-        if (boardState[cell.id] === '' && nextMove === null) {
-          nextMove = cell.id;
+        if (hasHumanWinner || hasAiWinner) {
+          hasWin = true;
+        }
+        if (hasHumanWinner) {
+          winner = 'human';
+        }
+        if (hasAiWinner) {
+          winner = 'ai';
         }
       });
-    });
+      return { hasHorizontalWin: hasWin, horizontalWinner: winner };
+    },
+    [board]
+  );
+  const checkForVertical = useCallback(
+    currentBoardState => {
+      let hasWin = false;
+      let winner = '';
+
+      for (let i = 0; i < board.length; i++) {
+        const column = [
+          board[0].cells[i],
+          board[1].cells[i],
+          board[2].cells[i],
+        ];
+        const hasAiWinner = column.every(
+          cell => currentBoardState[cell.id] === gameSymbols.ai
+        );
+        const hasHumanWinner = column.every(
+          cell => currentBoardState[cell.id] === gameSymbols.human
+        );
+
+        if (hasHumanWinner || hasAiWinner) {
+          hasWin = true;
+        }
+        if (hasHumanWinner) {
+          winner = 'human';
+        }
+        if (hasAiWinner) {
+          winner = 'ai';
+        }
+      }
+      return { hasVerticalWin: hasWin, verticalWinner: winner };
+    },
+    [board]
+  );
+  const checkForDiagonal = useCallback(
+    currentBoardState => {
+      let hasWin = false;
+      let winner = '';
+
+      const diag1 = [board[0].cells[0], board[1].cells[1], board[2].cells[2]];
+      const diag2 = [board[0].cells[2], board[1].cells[1], board[2].cells[0]];
+      const hasAiWinner =
+        diag1.every(cell => currentBoardState[cell.id] === gameSymbols.ai) ||
+        diag2.every(cell => currentBoardState[cell.id] === gameSymbols.ai);
+      const hasHumanWinner =
+        diag1.every(cell => currentBoardState[cell.id] === gameSymbols.human) ||
+        diag2.every(cell => currentBoardState[cell.id] === gameSymbols.human);
+
+      if (hasHumanWinner || hasAiWinner) {
+        hasWin = true;
+      }
+      if (hasHumanWinner) {
+        winner = 'human';
+      }
+      if (hasAiWinner) {
+        winner = 'ai';
+      }
+      return { hasDiagonalWin: hasWin, diagonalWinner: winner };
+    },
+    [board]
+  );
+
+  const checkForWinner = useCallback(
+    currentBoardState => {
+      const { hasHorizontalWin, horizontalWinner } =
+        checkForHorizontal(currentBoardState);
+      const { hasVerticalWin, verticalWinner } =
+        checkForVertical(currentBoardState);
+      const { hasDiagonalWin, diagonalWinner } =
+        checkForDiagonal(currentBoardState);
+      const isFullTable = board.every(boardRow =>
+        boardRow.cells.every(cell => currentBoardState[cell.id] !== '')
+      );
+      const hasTie =
+        !hasHorizontalWin && !hasVerticalWin && !hasDiagonalWin && isFullTable;
+      return {
+        hasWinnerExists: hasHorizontalWin || hasVerticalWin || hasDiagonalWin,
+        winner: horizontalWinner || verticalWinner || diagonalWinner,
+        hasTie,
+      };
+    },
+    [checkForHorizontal, checkForVertical, checkForDiagonal]
+  );
+
+  const setWinnerState = useCallback(() => {
+    const { hasWinnerExists, winner, hasTie } = checkForWinner(boardState);
+    setWinnerExists(hasWinnerExists);
+    setWinner(winner);
+    setHasTie(hasTie);
+  }, [checkForWinner, boardState]);
+
+  useEffect(() => {
+    setWinnerState();
+  }, [setWinnerState]);
+
+  const minMax = useCallback(
+    (localBoardState, isMaximizing, depth = 0, calls = 0) => {
+      return 1;
+      // calls++;
+      // console.log('calls', calls);
+      // const { hasWinnerExists, winner, hasTie } =
+      //   checkForWinner(localBoardState);
+      // if (hasWinnerExists) {
+      //   return minMaxMap[winner];
+      // }
+
+      // if (hasTie) {
+      //   return 0;
+      // }
+
+      // for (let i = 0; i < board.length; i++) {
+      //   for (let j = 0; j < board[i].cells.length; j++) {
+      //     if (localBoardState[board[i].cells[j].id] === '' && isMaximizing) {
+      //       localBoardState[board[i].cells[j].id] = gameSymbols.ai;
+      //       minMax(localBoardState, false, depth + 1);
+      //       localBoardState[board[i].cells[j].id] = '';
+      //     }
+
+      //     if (localBoardState[board[i].cells[j].id] === '' && !isMaximizing) {
+      //       localBoardState[board[i].cells[j].id] = gameSymbols.human;
+      //       minMax(localBoardState, true, depth + 1);
+      //       localBoardState[board[i].cells[j].id] = '';
+      //     }
+      //   }
+      // }
+    },
+    []
+  );
+
+  const nextBestMove = currentBoardState => {
+    let bestScore = -Infinity;
+    let bestMove = {};
+    for (let i = 0; i < board.length; i++) {
+      for (let j = 0; j < board[i].cells.length; j++) {
+        if (currentBoardState[board[i].cells[j].id] === '') {
+          currentBoardState[board[i].cells[j].id] = gameSymbols.ai;
+          let score = minMax(currentBoardState, true);
+          currentBoardState[board[i].cells[j].id] = '';
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = { i, j };
+          }
+        }
+      }
+    }
+    return bestMove;
+  };
+
+  const executeAiTurn = useCallback(() => {
+    const { i: rowIndex, j: colIndex } = nextBestMove({ ...boardState });
     setBoardState(prev => {
       const nextState = { ...prev };
-      nextState[nextMove] = gameSymbols.ai;
+      nextState[board[rowIndex].cells[colIndex].id] = gameSymbols.ai;
       return nextState;
     });
+    // let nextMove = null;
+    // board.forEach(boardRow => {
+    //   boardRow.cells.forEach(cell => {
+    //     if (boardState[cell.id] === '') {
+    //       nextMove = cell.id;
+    //     }
+    //   });
+    // });
+    // setBoardState(prev => {
+    //   const nextState = { ...prev };
+    //   nextState[nextMove] = gameSymbols.ai;
+    //   return nextState;
+    // });
     setUserMark('human');
-  }, [board, boardState]);
+  }, [board, boardState, minMax]);
 
   useEffect(() => {
     if (userMark === 'ai') {
@@ -169,12 +268,18 @@ export const Game = () => {
           <h4>{winner} has won.</h4>
         </>
       ) : null}
-      {userMark === 'ai' && !winnerExists ? (
+      {hasTie ? (
+        <>
+          <h3>Draw!</h3>
+          <h4>Nobody has won.</h4>
+        </>
+      ) : null}
+      {userMark === 'ai' && !winnerExists && !hasTie ? (
         <>
           <h4>Ai is thinking.....</h4>
         </>
       ) : null}
-      {userMark === 'human' && !winnerExists ? (
+      {userMark === 'human' && !winnerExists && !hasTie ? (
         <>
           <h4>Please take your turn</h4>
         </>
