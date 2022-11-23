@@ -28,24 +28,28 @@ export const Game = () => {
   const [winner, setWinner] = useState('');
   const [board, setBoard] = useState(buildInitialGameState);
   const [boardState, setBoardState] = useState(buildInitialBoardState(board));
-  const userMark = useRef('ai');
+  const [userMark, setUserMark] = useState('ai');
 
   const handleUpdateCellByUser = cellId => {
+    if (winnerExists) return;
+    // if (userMark === 'ai') return;
     setBoardState(prev => {
       const newState = { ...prev };
-      newState[cellId] = gameSymbols[userMark.current];
-      if (userMark.current === 'ai') {
-        userMark.current = 'human';
+      newState[cellId] = gameSymbols[userMark];
+      if (userMark === 'ai') {
+        setUserMark('human');
       } else {
-        userMark.current = 'ai';
+        setUserMark('ai');
       }
       return newState;
     });
   };
+
   const handleReset = () => {
     const newBoard = buildInitialGameState();
     setBoard(newBoard);
     setBoardState(buildInitialBoardState(newBoard));
+    setUserMark('ai');
   };
 
   const checkForHorizontal = useCallback(() => {
@@ -102,14 +106,6 @@ export const Game = () => {
 
     const diag1 = [board[0].cells[0], board[1].cells[1], board[2].cells[2]];
     const diag2 = [board[0].cells[2], board[1].cells[1], board[2].cells[0]];
-    console.log(
-      'diag1',
-      diag1.map(cell => boardState[cell.id])
-    );
-    console.log(
-      'diag2',
-      diag2.map(cell => boardState[cell.id])
-    );
     const hasAiWinner =
       diag1.every(cell => boardState[cell.id] === gameSymbols.ai) ||
       diag2.every(cell => boardState[cell.id] === gameSymbols.ai);
@@ -148,6 +144,16 @@ export const Game = () => {
         <>
           <h3>Winner!</h3>
           <h4>{winner} has won.</h4>
+        </>
+      ) : null}
+      {userMark === 'ai' && !winnerExists ? (
+        <>
+          <h4>Ai is thinking.....</h4>
+        </>
+      ) : null}
+      {userMark === 'human' && !winnerExists ? (
+        <>
+          <h4>Please take your turn</h4>
         </>
       ) : null}
       <button type='button' onClick={handleReset}>
