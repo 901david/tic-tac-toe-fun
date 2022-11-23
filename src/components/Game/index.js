@@ -32,7 +32,7 @@ export const Game = () => {
 
   const handleUpdateCellByUser = cellId => {
     if (winnerExists) return;
-    // if (userMark === 'ai') return;
+    if (userMark === 'ai') return;
     setBoardState(prev => {
       const newState = { ...prev };
       newState[cellId] = gameSymbols[userMark];
@@ -137,6 +137,29 @@ export const Game = () => {
   useEffect(() => {
     checkForWinner();
   }, [checkForWinner]);
+
+  const executeAiTurn = useCallback(() => {
+    let nextMove = null;
+    board.forEach(boardRow => {
+      boardRow.cells.forEach(cell => {
+        if (boardState[cell.id] === '' && nextMove === null) {
+          nextMove = cell.id;
+        }
+      });
+    });
+    setBoardState(prev => {
+      const nextState = { ...prev };
+      nextState[nextMove] = gameSymbols.ai;
+      return nextState;
+    });
+    setUserMark('human');
+  }, [board, boardState]);
+
+  useEffect(() => {
+    if (userMark === 'ai') {
+      executeAiTurn();
+    }
+  }, [userMark, executeAiTurn]);
 
   return (
     <>
