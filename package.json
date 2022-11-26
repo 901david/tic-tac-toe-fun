@@ -6,8 +6,10 @@
   "scripts": {
     "start": "webpack serve --config webpack.dev.js --stats verbose --progress",
     "build:dev:env": "webpack --config webpack.prod.js --stats verbose --progress --output-path dist/dev",
-    "build": "webpack --config webpack.prod.js --stats verbose --progress",
+    "build": "webpack --config webpack.prod.js --stats verbose --progress --output-path dist/prod",
     "deploy:dev": "./deploy_dev.sh",
+    "deploy:prod": "./deploy_prod.sh",
+    "rollback:prod": "./rollback.sh",
     "lint": "eslint .",
     "lint:fix": "eslint --fix",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ./.prettierrc"
