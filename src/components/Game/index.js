@@ -24,9 +24,9 @@ const buildInitialBoardState = board => {
 };
 
 const minMaxMap = {
-  ai: 1,
+  ai: 10,
   tie: 0,
-  human: -1,
+  human: -10,
 };
 
 export const Game = () => {
@@ -36,7 +36,10 @@ export const Game = () => {
   const [board, setBoard] = useState(buildInitialGameState);
   const [boardState, setBoardState] = useState(buildInitialBoardState(board));
   const [userMark, setUserMark] = useState('ai');
-
+  console.log(
+    'YOUR BOARD',
+    board.map(boardRow => boardRow.cells.map(cell => boardState[cell.id]))
+  );
   const handleUpdateCellByUser = cellId => {
     if (winnerExists) return;
     if (userMark === 'ai') return;
@@ -56,7 +59,8 @@ export const Game = () => {
     const newBoard = buildInitialGameState();
     setBoard(newBoard);
     setBoardState(buildInitialBoardState(newBoard));
-    setUserMark('ai');
+
+    setTimeout(() => setUserMark('ai'), 0);
   };
 
   const checkForHorizontal = useCallback(
@@ -164,7 +168,7 @@ export const Game = () => {
         hasTie,
       };
     },
-    [checkForHorizontal, checkForVertical, checkForDiagonal]
+    [checkForHorizontal, checkForVertical, checkForDiagonal, board]
   );
 
   const setWinnerState = useCallback(() => {
@@ -178,61 +182,68 @@ export const Game = () => {
     setWinnerState();
   }, [setWinnerState]);
 
-  const minMax = useCallback((localBoardState, isMaximizing, depth = 0) => {
-    const { hasWinnerExists, winner, hasTie } = checkForWinner(localBoardState);
-    if (hasWinnerExists) {
-      return minMaxMap[winner];
-    }
-    if (hasTie) {
-      return minMaxMap.tie;
-    }
-    if (isMaximizing) {
-      let bestScore = -Infinity;
-      for (let i = 0; i < board.length; i++) {
-        for (let j = 0; j < board[i].cells.length; j++) {
-          if (localBoardState[board[i].cells[j].id] === '') {
-            localBoardState[board[i].cells[j].id] = gameSymbols.ai;
-            const score = minMax(localBoardState, false, depth + 1);
-            localBoardState[board[i].cells[j].id] = '';
-            bestScore = Math.max(bestScore, score);
+  const minMax = useCallback(
+    (localBoardState, isMaximizing, depth = 0) => {
+      const { hasWinnerExists, winner, hasTie } =
+        checkForWinner(localBoardState);
+      if (hasWinnerExists) {
+        return minMaxMap[winner] - depth;
+      }
+      if (hasTie) {
+        return minMaxMap.tie;
+      }
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < board.length; i++) {
+          for (let j = 0; j < board[i].cells.length; j++) {
+            if (localBoardState[board[i].cells[j].id] === '') {
+              localBoardState[board[i].cells[j].id] = gameSymbols.ai;
+              const score = minMax(localBoardState, false, depth + 1);
+              localBoardState[board[i].cells[j].id] = '';
+              bestScore = Math.max(bestScore, score);
+            }
           }
         }
-      }
-      return bestScore;
-    } else {
-      let bestScore = Infinity;
-      for (let i = 0; i < board.length; i++) {
-        for (let j = 0; j < board[i].cells.length; j++) {
-          if (localBoardState[board[i].cells[j].id] === '') {
-            localBoardState[board[i].cells[j].id] = gameSymbols.human;
-            const score = minMax(localBoardState, true, depth + 1);
-            localBoardState[board[i].cells[j].id] = '';
-            bestScore = Math.min(bestScore, score);
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < board.length; i++) {
+          for (let j = 0; j < board[i].cells.length; j++) {
+            if (localBoardState[board[i].cells[j].id] === '') {
+              localBoardState[board[i].cells[j].id] = gameSymbols.human;
+              const score = minMax(localBoardState, true, depth + 1);
+              localBoardState[board[i].cells[j].id] = '';
+              bestScore = Math.min(bestScore, score);
+            }
           }
         }
+        return bestScore;
       }
-      return bestScore;
-    }
-  }, []);
+    },
+    [checkForWinner, board]
+  );
 
-  const nextBestMove = currentBoardState => {
-    let bestScore = -Infinity;
-    let bestMove = {};
-    for (let i = 0; i < board.length; i++) {
-      for (let j = 0; j < board[i].cells.length; j++) {
-        if (currentBoardState[board[i].cells[j].id] === '') {
-          currentBoardState[board[i].cells[j].id] = gameSymbols.ai;
-          const score = minMax(currentBoardState, false);
-          currentBoardState[board[i].cells[j].id] = '';
-          if (score > bestScore) {
-            bestScore = score;
-            bestMove = { i, j };
+  const nextBestMove = useCallback(
+    currentBoardState => {
+      let bestScore = -Infinity;
+      let bestMove = {};
+      for (let i = 0; i < board.length; i++) {
+        for (let j = 0; j < board[i].cells.length; j++) {
+          if (currentBoardState[board[i].cells[j].id] === '') {
+            currentBoardState[board[i].cells[j].id] = gameSymbols.ai;
+            const score = minMax(currentBoardState, false);
+            currentBoardState[board[i].cells[j].id] = '';
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = { i, j };
+            }
           }
         }
       }
-    }
-    return bestMove;
-  };
+      return bestMove;
+    },
+    [board, minMax]
+  );
 
   const executeAiTurn = useCallback(() => {
     const { i: rowIndex, j: colIndex } = nextBestMove({ ...boardState });
@@ -241,21 +252,8 @@ export const Game = () => {
       nextState[board[rowIndex].cells[colIndex].id] = gameSymbols.ai;
       return nextState;
     });
-    // let nextMove = null;
-    // board.forEach(boardRow => {
-    //   boardRow.cells.forEach(cell => {
-    //     if (boardState[cell.id] === '') {
-    //       nextMove = cell.id;
-    //     }
-    //   });
-    // });
-    // setBoardState(prev => {
-    //   const nextState = { ...prev };
-    //   nextState[nextMove] = gameSymbols.ai;
-    //   return nextState;
-    // });
     setUserMark('human');
-  }, [board, boardState, minMax]);
+  }, [board, boardState, minMax, nextBestMove]);
 
   useEffect(() => {
     if (userMark === 'ai') {
