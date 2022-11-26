@@ -1,28 +1,65 @@
-import { useState } from 'react';
+import { useCallback, useEffect } from 'react';
 
-import { getUUID } from 'utils/getUUID';
 import { CellRow } from 'components/CellRow';
+import { useAiLogic } from 'utils/useAiLogic';
+import { useGameState } from 'utils/useGameState';
+import { BoardValidator } from 'utils/BoardValidator';
 import { GameWrapper } from './styled-components';
+import { GameMessages } from '../GameMessages';
+
+const boardValidator = new BoardValidator();
 
 export const Game = () => {
-  const [board, setBoard] = useState(
-    Array.from({ length: 3 }, () => {
-      return {
-        id: getUUID(),
-        cells: Array.from({ length: 3 }, () => ({ id: getUUID(), value: '' })),
-      };
-    })
-  );
+  const gameState = useGameState();
+  const aiPlayer = useAiLogic(gameState.board);
 
-  console.log('board', board);
+  const setWinnerState = useCallback(() => {
+    const { hasWinnerExists, winner, hasTie } = boardValidator.checkForWinner(
+      gameState.boardState,
+      gameState.board
+    );
+    gameState.setWinnerExists(hasWinnerExists);
+    gameState.setWinner(winner);
+    gameState.setHasTie(hasTie);
+  }, [gameState]);
+
+  useEffect(() => {
+    setWinnerState();
+  }, [setWinnerState]);
+
+  useEffect(() => {
+    if (gameState.userMark === 'ai') {
+      setTimeout(
+        () =>
+          aiPlayer.executeAiTurn(
+            gameState.boardState,
+            gameState.setBoardState,
+            gameState.setUserMark
+          ),
+        750
+      );
+    }
+  }, [gameState.userMark, aiPlayer.executeAiTurn]);
 
   return (
-    <GameWrapper>
-      {board.map((row, rowIndex) => {
-        return (
-          <CellRow key={row.id} cells={row.cells} rowPosition={rowIndex} />
-        );
-      })}
-    </GameWrapper>
+    <>
+      <GameMessages gameState={gameState} />
+      <button type="button" onClick={gameState.handleReset}>
+        Reset
+      </button>
+      <GameWrapper>
+        {gameState.board.map((row, rowIndex) => {
+          return (
+            <CellRow
+              key={row.id}
+              cells={row.cells}
+              rowPosition={rowIndex}
+              boardState={gameState.boardState}
+              updateCellByUser={gameState.handleUpdateCellByUser}
+            />
+          );
+        })}
+      </GameWrapper>
+    </>
   );
 };

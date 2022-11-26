@@ -1,7 +1,12 @@
 import { Cell } from 'components/Cell';
 import { CellRowWrapper } from './styled-components';
 
-export const CellRow = ({ cells, rowPosition }) => {
+export const CellRow = ({
+  cells,
+  rowPosition,
+  boardState,
+  updateCellByUser,
+}) => {
   return (
     <CellRowWrapper>
       {cells.map((cell, cellIndex) => {
@@ -10,7 +15,8 @@ export const CellRow = ({ cells, rowPosition }) => {
             key={cell.id}
             rowPosition={rowPosition}
             cellPosition={cellIndex}
-            cellValue={cell.value}
+            cellValue={boardState[cell.id]}
+            updateCellByUser={() => updateCellByUser(cell.id)}
           />
         );
       })}
